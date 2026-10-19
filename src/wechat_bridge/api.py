@@ -28,9 +28,8 @@ TOOLS = [
     ('wechat_send_status', '读取发送回执；locally_observed 仅代表本机存在匹配记录。', schema({'id': S}, ('id',))),
     ('wechat_cancel_send', '取消尚未开始的 queued/preview 请求。', schema({'id': S}, ('id',))),
     ('wechat_reconcile_send', '只读核对 unknown 请求，绝不重发。', schema({'id': S}, ('id',))),
-    ('wechat_clear_failed_draft', '暂停后清理本服务明确停在粘贴/预览阶段的失败草稿；严格核对原内容，不发送。', schema({'id': S}, ('id',))),
     ('wechat_pause', '立即禁止后续发送步骤，方便人工接管。', schema()),
-    ('wechat_resume', '恢复本地已启用模式的队列执行；不能启用桌面发送或修改白名单。', schema()),
+    ('wechat_resume', '恢复本地已启用模式的队列执行；不能启用真实发送或修改白名单。', schema()),
 ]
 REGISTRY = {name: (description, value) for name, description, value in TOOLS}
 
@@ -85,7 +84,6 @@ def call(bridge, name, args):
     if name == 'wechat_send_status': return db.job(args['id'])
     if name == 'wechat_cancel_send': return db.transition(args['id'], ['queued', 'preview'], 'cancelled', {'reason': 'cancelled_by_caller'})
     if name == 'wechat_reconcile_send': return bridge.reconcile(args['id'])
-    if name == 'wechat_clear_failed_draft': return bridge.clear_failed_draft(args['id'])
     if name in ('wechat_pause', 'wechat_resume'):
         db.set_paused(name == 'wechat_pause')
         return {'paused': db.paused()}

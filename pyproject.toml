@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wechat-agent-bridge"
-version = "0.2.0rc1"
-description = "Local ordinary-account WeChat message gateway for agents"
+version = "0.2.0rc2"
+description = "Background local WeChat reader for agents; real sending not yet implemented"
 readme = "README.md"
 license = "MIT AND Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "src/wechat_bridge/vendor/LICENSE*"]
@@ -17,7 +17,7 @@ Repository = "https://github.com/CH3SH-LC/wechat-agent-bridge"
 Issues = "https://github.com/CH3SH-LC/wechat-agent-bridge/issues"
 
 [project.optional-dependencies]
-desktop = ["uiautomation>=2.0.20,<3; sys_platform == 'win32'", "pywin32>=306; sys_platform == 'win32'", "psutil>=7,<8; sys_platform == 'win32'"]
+live = ["pywin32>=306; sys_platform == 'win32'", "psutil>=7,<8; sys_platform == 'win32'"]
 dev = ["build>=1.2,<2"]
 
 [project.scripts]

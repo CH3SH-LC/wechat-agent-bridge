@@ -41,13 +41,11 @@ def main(argv=None):
     sub = parser.add_subparsers(dest='command', required=True)
     init = sub.add_parser('init', help='创建全新隔离演示目录，不访问微信')
     init.add_argument('--directory', required=True)
-    sub.add_parser('doctor', help='只读列出登录进程、账号目录、窗口和 DLL 哈希；输出包含私人路径')
+    sub.add_parser('doctor', help='只读列出登录进程、账号目录、版本和 DLL 哈希；输出包含私人路径')
     live = sub.add_parser('init-live', help='为明确指定的已登录账号生成实时读取配置，发送仍为预览')
     live.add_argument('--directory', required=True)
     live.add_argument('--pid', required=True, type=int)
-    live.add_argument('--window', required=True, type=int)
     live.add_argument('--account-id', required=True)
-    live.add_argument('--scoped-qt', action='store_true', help='显式选择版本固定、退出恢复的 Qt 无障碍兼容模式')
     sub.add_parser('serve', help='启动本地 HTTP 服务和收发队列')
     sub.add_parser('mcp', help='通过 stdio 连接已运行服务')
     invoke = sub.add_parser('call', help='调用接口')
@@ -55,7 +53,6 @@ def main(argv=None):
     invoke.add_argument('--arguments', default='{}', help='JSON 参数；复杂内容可用 --arguments-file')
     invoke.add_argument('--arguments-file', type=Path)
     sub.add_parser('tools', help='输出完整工具定义')
-    sub.add_parser('inspect-ui', help='显式读取绑定窗口控件树，可能包含私人信息；不会点击')
     args = parser.parse_args(argv)
     try:
         if args.command == 'init':
@@ -71,7 +68,7 @@ def main(argv=None):
             return 0
         if args.command == 'init-live':
             from .diagnostics import initialize_live
-            print(json_text(initialize_live(args.directory, args.pid, args.window, args.account_id, args.scoped_qt)))
+            print(json_text(initialize_live(args.directory, args.pid, args.account_id)))
             return 0
         cfg = load_config(args.config)
         if args.command == 'call':
@@ -81,15 +78,6 @@ def main(argv=None):
         elif args.command == 'mcp':
             from .transport import mcp
             mcp(cfg)
-        elif args.command == 'inspect-ui':
-            from .desktop import DesktopSender
-            require(cfg.desktop_window is not None, 'invalid_config', '先在本地配置绑定窗口。')
-            lock = ProcessLock(Path(tempfile.gettempdir()) / 'wechat-agent-bridge-locks' / f'pid-{cfg.desktop_pid}.lock')
-            lock.acquire()
-            try:
-                print(json_text({'controls': DesktopSender(cfg).inspect()}))
-            finally:
-                lock.close()
         elif args.command == 'serve':
             from .service import Bridge
             from .transport import server

@@ -1,38 +1,23 @@
-# 实现结构与维护边界
+# 实现结构与开发边界
 
-`config.py` 只加载本地配置。账号、来源、模式、文件根目录和会话白名单不可通过远程工具改写。`cli.py` 持有状态目录锁；live 模式还持有当前 Windows 用户临时目录中的 PID 锁，避免多个本服务实例同时操作同一微信进程。
+`config.py` 加载本地账号、来源、模式、目录和白名单，远程工具不能修改。`cli.py` 持有服务目录锁及实时来源的 PID 锁。`diagnostics.py` 只读枚举进程、模块及账号数据库句柄，不枚举或操作窗口。`desktop_identity.py` 为历史文件名，内容仅检查数据库句柄所属账号。
 
-`sources.py` 定义 fixture、verified snapshot 和 live 三种来源。LiveSource 复用原 collector 的只读进程、密钥认证与 WAL/SHM 快照逻辑，只在内存维护密钥。新一轮所有必要数据库都成功后再发布映射。失败不以空列表冒充没有消息。轮询不建立跨数据库 SQLite 原子事务。
+`sources.py` 支持 fixture、verified snapshot 和 live。实时来源复用只读进程访问、密钥认证、WAL/SHM 快照和分片读取，密钥仅在内存。必要数据库全部成功后才发布新映射；失败不返回假空数据。轮询不是跨数据库原子事务，也不是仅解密新增页。
 
-`store.py` 用 SQLite WAL 保存入站事件、每分片游标、租约、附件与出站请求。入站去重键由账号、会话、分片、local_id、sort_seq 组成。消费者通过 lease/ack 获得至少一次处理保证，不承诺远端副作用恰好一次。Failed 消息必须显式 retry。事件正文标为 `untrusted_content`。
+`store.py` 用 SQLite WAL 保存事件、分片游标、租约、附件和出站请求。入站去重包含账号、会话、分片、local_id、sort_seq。消费者是至少一次处理，failed 需要显式 retry；正文标为 untrusted_content。
 
-`service.py` 分离采集线程与串行发送线程；两者共享 source 锁。出站请求落盘后再执行，进入 sending 前记录来源基线，崩溃恢复将 sending 改为 unknown。单个订阅出错不阻塞其他订阅继续入库；服务状态报告错误。所有实际发送前重新检查模式、白名单、同名会话、暂停与附件完整性。
+`service.py` 分离采集和串行出站线程，共享来源锁。当前仅有隔离 mock 出站；preview 不执行，disabled 拒绝入队。旧 desktop 配置不能启动，旧 queued 任务不能执行；sending 崩溃记录恢复为 unknown，不自动重发。真实后台发送不存在，状态必须明确报告 false。测试注入 sender 也只允许在 mock + fixture 下执行。
 
-`desktop.py` 延迟加载 UIA/Win32 依赖，经窗口/焦点核对和剪贴板操作发送。`desktop_identity.py` 通过当前进程打开的数据库句柄绑定账号；`qt_accessibility.py` 在显式 scoped_qt 模式下，针对固定 DLL 哈希短暂修改一个无障碍布尔标志并在退出时恢复。不修改磁盘 DLL、不注入执行代码。文件草稿通过微信导出的 CF_HDROP 与富文本 XML 双重验证单个暂存路径。每次实际按键前重查目标、草稿、暂停及附件完整性。实机验收结果单独记录于 TEST_REPORT.md。
+界面发送器和 Qt 写入代码已从发行源码删除。旧恢复草稿 API、inspect-ui 命令、窗口 handle 参数及 UI 自动化依赖均移除。不能通过“自动兜底”重新引入界面路线。旧草稿和 unknown 回执保留，核对接口只读。对应历史可从 Git 旧提交追溯。
 
-失败草稿恢复属于同一发送互斥锁内的接口操作：必须暂停，旧回执明确停在 pasting/preview_check，当前数据库未出现对应消息，当前聊天和草稿精确匹配，才删除草稿并将旧请求取消。不会导航到其他聊天，不会重发。issuing_send/send_issued、缺失阶段及崩溃未知均拒绝恢复。不能把恢复接口当成通用清空输入框功能。
+`api.py` 是 HTTP、CLI、MCP 共用严格协议。`transport.py` 提供认证回环 HTTP 和 stdio MCP，忽略代理，stdout 只输出 JSON-RPC。用 tools 导出 Schema。
 
-`diagnostics.py` 提供只读进程/账号/窗口发现和生成 preview 配置，不开启 Qt 标志、不扫描消息密钥。`send_target_names` 将白名单中的每个稳定 ID 固定为本地预期名称；启用时必须覆盖整个白名单，远端不可修改。
+## 开发与发布
 
-`api.py` 是 HTTP、CLI、MCP 共用的严格参数协议。`transport.py` 用标准库提供认证回环 HTTP 与 stdio MCP，客户端忽略系统 HTTP 代理，stdout 仅输出 JSON-RPC。通过 `tools` 命令导出机器可读 Schema，无需手工维护另一份工具定义。
+统一运行 `python -m unittest discover -s tests -v`，再从干净发布 checkout 构建 `python -m build`。CI 覆盖 Windows/Linux × Python 3.10/3.13。真实发送脚本不是 CI 测试，必须先验证服务确有后台文字及文件发送能力。
 
-## 版本适配时必须保留的性质
+只导出明确源码清单。不得发布 .live、.venv、配置、令牌、账号路径、解密缓存和真实聊天回执。公开验收记录只含脱敏统计或合成数据。不能把 mock、历史局部发送、其他版本的上游演示写成当前微信实机通过。
 
-1. SQLite 来源身份与 UI 会话身份必须一致。稳定 ID 用于授权，显示名只用于 UI 导航；不允许同名会话猜选。
-2. 按分片解析本人 ID；新的消息分片使用独立游标，不能以全局最大值过滤。
-3. 不在发送错误后自动重新按键；不将按键成功当作送达。unknown 必须保留供人工核对。
-4. 人工草稿不得清空覆盖；焦点变化时不继续按 Enter。
-5. 读取原始账号文件保持只读；候选密钥不得写盘、打印或加入回执。
-6. 测试默认隔离；只有单独配置并授权的测试群才能用于真实发送验收。
+## 已知限制
 
-## 开发和发布
-
-安装 `.[desktop,dev]` 后集中运行 `python -m unittest discover -s tests -v`，再 `python -m build`。CI 覆盖 Windows/Linux、Python 3.10/3.13；真实验收脚本不进入 CI，仅操作者显式使用 --execute 才运行。提交应附问题、代码修改和实际验证范围，不能将 mock 回执记为微信实测。
-
-公开源码采用明确文件清单从工作区导出，再检查文件内容与构建包。禁止分发 .live、.venv、私有配置、api-token、微信账号目录、解密缓存及实机聊天回执。TEST_REPORT.md 和 docs/verification 只放脱敏统计与合成数据。原始证据留在本机私有目录。
-
-## 已知工程限制
-
-服务状态、快照缓存和附件按运行增长，暂未实现自动保留期清理。旧进程留下的解密缓存也不会启动时自动删除，以免误删证据；可在停止服务并备份后，由用户清理 `source-cache`。没有 Windows 服务安装、自启动、远程监听、登录自动恢复或媒体内容下载。历史记录中的图片/语音先提供类型和可读结构化描述，不是图片识别或语音转写。
-
-实时捕获仍需复制、认证和重放发生变化的整个分片，不是每次只解密新增页。大型数据库的轮询延迟可能高于配置间隔；大规模历史补录每轮每分片最多 500 条，旧历史插入到已过游标的位置不会自动重播。需要评估真实数据规模后才能承诺吞吐和延迟。
+后台发送尚未实现，见 [适配调查](BACKGROUND_ADAPTATION.md)。没有自动保留期清理、Windows 服务安装、自启动、自动重登、原始媒体下载或多日可靠性保证。发生变化的整个消息分片需要认证解密，大库轮询可能超过配置间隔。每轮补录存在分页上限，插入到旧游标之前的历史记录不会自动重播。

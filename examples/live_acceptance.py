@@ -42,7 +42,10 @@ def main():
         print(json.dumps({'step': label, 'state': job['state']}, ensure_ascii=False), flush=True)
         return job
     status = call('wechat_status')
-    require(status['config']['sending_mode'] == 'desktop', 'invalid_state', '需要明确启用的桌面发送模式。')
+    caps = status.get('capabilities', {})
+    require(caps.get('real_send_text') is True and caps.get('real_send_file') is True
+            and caps.get('ui_automation') is False, 'background_sender_unavailable',
+            '服务必须具备真实后台文字和文件发送能力；当前版本不具备，不执行验收。')
     names = status['config']['send_target_names']
     require(set(names) == set(status['config']['send_allowlist']) and names
             and set(names.values()) <= {'测试群', '文件传输助手'}, 'unsafe_acceptance_config', '本验收只接受两个指定名称且固定 ID 的白名单。')

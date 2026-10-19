@@ -19,7 +19,6 @@ from wechat_bridge.api import call, tool_list
 from wechat_bridge.cli import initialize
 from wechat_bridge.common import BridgeError, ProcessLock, atomic_json, file_hash, json_text
 from wechat_bridge.config import Config, load_config
-from wechat_bridge.desktop import DesktopSender
 from wechat_bridge.service import Bridge
 from wechat_bridge.sources import DatabaseSource, SnapshotSource, table_for
 from wechat_bridge.store import Store
@@ -423,7 +422,7 @@ class TransportTests(FixtureCase):
         mcp(self.cfg, io.StringIO('\n'.join(json_text(m) for m in messages) + '\n'), outgoing)
         replies = [json.loads(x) for x in outgoing.getvalue().splitlines()]
         self.assertEqual(len(replies), 4)
-        self.assertEqual(len(replies[1]['result']['tools']), 20)
+        self.assertEqual(len(replies[1]['result']['tools']), 19)
         self.assertFalse(replies[2]['result']['isError'])
         self.assertTrue(replies[3]['result']['isError'])
 
@@ -444,59 +443,6 @@ class TransportTests(FixtureCase):
     def test_proxy_environment_does_not_receive_token(self):
         with patch.dict(os.environ, {'HTTP_PROXY': 'http://127.0.0.1:1', 'NO_PROXY': ''}):
             self.assertEqual(remote_call(self.cfg, 'wechat_status', {})['config']['account_id'], self.cfg.account_id)
-
-
-class DesktopGuardTests(FixtureCase):
-    def fake(self, value='hello'):
-        sender = DesktopSender(self.cfg)
-        editor = Mock()
-        values = iter(['', value])
-        sender.session = lambda: nullcontext((Mock(), Mock(), Mock(), Mock()))
-        sender.navigate = lambda *_: editor
-        sender.focused_input = lambda *_: editor
-        sender.value = lambda *_: next(values)
-        sender.set_clipboard = Mock()
-        return sender, editor
-
-    def test_text_matches_before_enter(self):
-        sender, editor = self.fake()
-        with patch('wechat_bridge.desktop.time.sleep'):
-            sender.send({'text': 'hello'}, None, '隔离测试群', lambda: None)
-        self.assertEqual([x.args[0] for x in editor.SendKeys.call_args_list], ['{Ctrl}v', '{Enter}'])
-
-    def test_draft_mismatch_never_hits_enter(self):
-        sender, editor = self.fake('unexpected')
-        with patch('wechat_bridge.desktop.time.sleep'):
-            self.reject('draft_mismatch', lambda: sender.send({'text': 'hello'}, None, '隔离测试群', lambda: None))
-        self.assertEqual([x.args[0] for x in editor.SendKeys.call_args_list], ['{Ctrl}v'])
-
-    def test_pause_between_paste_and_commit_prevents_enter(self):
-        sender, editor = self.fake()
-        guard = Mock(side_effect=[None, BridgeError('paused', 'paused')])
-        with patch('wechat_bridge.desktop.time.sleep'):
-            self.reject('paused', lambda: sender.send({'text': 'hello'}, None, '隔离测试群', guard))
-        self.assertEqual([x.args[0] for x in editor.SendKeys.call_args_list], ['{Ctrl}v'])
-
-    def test_focus_loss_prevents_enter(self):
-        sender, editor = self.fake()
-        sender.focused_input = Mock(side_effect=[editor, editor, BridgeError('focus_changed', 'changed')])
-        with patch('wechat_bridge.desktop.time.sleep'):
-            self.reject('focus_changed', lambda: sender.send({'text': 'hello'}, None, '隔离测试群', lambda: None))
-        self.assertEqual([x.args[0] for x in editor.SendKeys.call_args_list], ['{Ctrl}v'])
-
-    def test_unreadable_draft_and_ambiguous_control_are_rejected(self):
-        editor = Mock()
-        editor.GetValuePattern.return_value = None
-        editor.GetLegacyIAccessiblePattern.return_value = None
-        self.reject('ui_unsupported', lambda: DesktopSender.value(editor))
-        self.reject('target_unavailable', lambda: DesktopSender.input_for([], 'title'))
-
-    def test_file_clipboard_format_has_unicode_terminator(self):
-        clip = Mock()
-        DesktopSender.set_clipboard(clip, path='D:\\synthetic\\附件.txt')
-        fmt, data = clip.SetClipboardData.call_args.args
-        self.assertEqual(fmt, 15)
-        self.assertTrue(data[20:].decode('utf-16-le').endswith('附件.txt\0\0'))
 
 
 class ConfigAndContractTests(FixtureCase):

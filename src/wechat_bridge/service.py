@@ -81,6 +81,10 @@ class Bridge:
     def status(self):
         return {'config': self.cfg.public(), 'paused': self.store.paused(), 'last_poll': self.last_poll,
                 'last_error': self.last_error, 'source': self.source.health(),
+                'capabilities': {'background_read': self.cfg.source_mode == 'live',
+                                 'real_send_text': False, 'real_send_file': False,
+                                 'ui_automation': False, 'real_send_transport': None,
+                                 'send_blocker': 'background_sender_not_implemented'},
                 'subscriptions': self.store.subscriptions(), **self.store.counts()}
 
     def chat(self, ident):
@@ -140,6 +144,10 @@ class Bridge:
         return item
 
     def send(self, chat_id, key, text=None, attachment_id=None):
+        require(self.cfg.sending_mode in {'preview', 'mock'}, 'background_sender_unavailable',
+                '后台直发尚未实现；界面发送已移除。本请求未入队、未发送。')
+        require(self.cfg.sending_mode != 'mock' or self.cfg.source_mode == 'fixture',
+                'invalid_config', '模拟发送不能访问真实微信。')
         chat = self.chat(chat_id)
         self._target_guard(chat)
         payload = dict(chat_id=chat_id, title=chat['name'], type='file' if attachment_id else 'text')
@@ -161,6 +169,8 @@ class Bridge:
 
     def _guard(self, job):
         p = job['payload']
+        require(self.cfg.sending_mode == 'mock' and self.cfg.source_mode == 'fixture',
+                'background_sender_unavailable', '当前版本没有真实后台发送器；拒绝执行旧队列。')
         require(not self.stop.is_set() and not self.store.paused(), 'paused', '发送已暂停。')
         require(p['mode'] == self.cfg.sending_mode and p['mode'] != 'preview', 'mode_changed', '发送模式已变化，不自动升级预览记录。')
         require(p['chat_id'] in self.cfg.send_allowlist, 'chat_forbidden', '会话已不在发送白名单中。')
@@ -168,7 +178,7 @@ class Bridge:
         self._target_guard(chat)
         require(chat['name'] == p['title'], 'target_changed', '会话标题已变化，需重新确认。')
         require(len([c for c in self.store.chats() if c['name'] == chat['name']]) == 1,
-                'ambiguous_target', '存在同名会话，桌面搜索无法安全区分。')
+                'ambiguous_target', '存在同名会话，需要明确目标。')
         return self.attachment(p['attachment_id']) if p['type'] == 'file' else None
 
     def _observe(self, job):
@@ -227,8 +237,7 @@ class Bridge:
                     self._guard(job)
                     self.source.append_outgoing(job['payload'], attachment)
                 else:
-                    from .desktop import DesktopSender
-                    dispatch = DesktopSender(self.cfg).send(job['payload'], attachment, job['payload']['title'], lambda: self._guard(job))
+                    raise BridgeError('background_sender_unavailable', '没有真实后台发送器。')
                 # Older injected adapters need not return structured evidence.
                 if not isinstance(dispatch, dict):
                     dispatch = None
@@ -257,36 +266,3 @@ class Bridge:
             evidence = self._observe(job)
             return self.store.transition(ident, ['unknown'], 'locally_observed', evidence) if evidence else job
 
-    def clear_failed_draft(self, ident):
-        """Remove only our proven pre-send draft, never an ambiguous sent job."""
-        with self.send_lock:
-            require(self.store.paused(), 'pause_required', '先暂停发送，再清理本服务留下的失败草稿。')
-            job = self.store.job(ident)
-            phase = ((job.get('result') or {}).get('adapter') or {}).get('phase')
-            require(job['state'] == 'unknown' and phase in {'pasting', 'preview_check'},
-                    'unsafe_draft_recovery', '仅能清理明确停在粘贴或预览阶段的失败请求；发送按键结果未知时不清理。')
-            require(self.cfg.sending_mode == 'desktop' and job['payload']['mode'] == 'desktop',
-                    'invalid_state', '失败草稿清理只适用于原来的桌面发送模式。')
-            def guard():
-                require(self.store.paused(), 'pause_required', '发送必须保持暂停。')
-                chat = self.chat(job['payload']['chat_id'])
-                self._target_guard(chat)
-                require(chat['name'] == job['payload']['title'] and
-                        len([c for c in self.store.chats() if c['name'] == chat['name']]) == 1,
-                        'target_changed', '目标名称已变化或存在同名会话。')
-                return self.attachment(job['payload']['attachment_id']) if job['payload']['type'] == 'file' else None
-            with self.source.lock:
-                self.source.refresh()
-                self.store.replace_chats(self.source.chats())
-                attachment = guard()
-            # Read-back first: never clear a job already present in the DB.
-            require(self._observe(job) is None, 'already_observed', '来源中已存在对应消息，请使用只读核对接口。')
-            from .desktop import DesktopSender
-            try:
-                result = DesktopSender(self.cfg).clear_failed_draft(job['payload'], attachment, guard)
-            except BridgeError:
-                raise
-            except Exception as exc:
-                raise BridgeError('draft_recovery_error', f'{type(exc).__name__}: {str(exc)[:500]}') from None
-            return self.store.transition(ident, ['unknown'], 'cancelled',
-                                         {'reason': 'verified_failed_draft_cleared', 'automatic_retry': False, 'adapter': result})

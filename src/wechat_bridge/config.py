@@ -28,12 +28,6 @@ class Config:
     port: int = 18769
     weixin_exe: str = r"D:\Program Files\Tencent\Weixin\Weixin.exe"
     desktop_pid: int | None = None
-    desktop_window: int | None = None
-    desktop_account_anchor: str = ""
-    desktop_identity: str = "ui_anchor"
-    desktop_accessibility: str = "existing"
-    desktop_dll_sha256: str = ""
-    send_hotkey: str = "{Enter}"
     token: str = ""
 
     def validate(self):
@@ -43,7 +37,7 @@ class Config:
             self.source_dir = Path(self.source_dir).resolve()
         self.file_roots = [Path(p).resolve() for p in self.file_roots]
         require(self.source_mode in {"fixture", "snapshot", "live"}, "invalid_config", "来源模式无效。")
-        require(self.sending_mode in {"preview", "desktop", "mock"}, "invalid_config", "发送模式无效。")
+        require(self.sending_mode in {"preview", "disabled", "mock"}, "invalid_config", "发送模式无效；界面发送已移除，后台发送尚未实现。")
         string(self.account_id, 200)
         require(bool(re.fullmatch(r"[A-Za-z0-9_@.\-]+", self.account_id)), "invalid_config", "账号标识无效。")
         require(self.source_dir is not None, "invalid_config", "必须显式选择读取来源。")
@@ -64,22 +58,10 @@ class Config:
                 'invalid_config', '固定名称必须绑定白名单中的会话 ID。')
         require(not self.send_target_names or set(self.send_target_names) == set(self.send_allowlist),
                 'invalid_config', '启用固定名称后必须覆盖整个发送白名单。')
-        if self.sending_mode == "desktop":
-            require(self.source_mode == "live" and bool(self.send_allowlist), "invalid_config", "桌面发送要求实时读取及明确白名单。")
-            require(type(self.desktop_pid) is int and self.desktop_pid > 0
-                    and type(self.desktop_window) is int and self.desktop_window > 0,
-                    "invalid_config", "请在本地绑定微信进程和窗口。")
-            require(self.desktop_identity != 'ui_anchor' or bool(self.desktop_account_anchor),
-                    'invalid_config', '账号控件模式需要精确控件标识。')
         if self.sending_mode == "mock":
             require(self.source_mode == "fixture", "invalid_config", "模拟发送只能搭配隔离数据。")
         if self.source_mode == 'live':
             require(type(self.desktop_pid) is int and self.desktop_pid > 0, 'invalid_config', '实时读取必须绑定微信主进程 PID。')
-        require(self.send_hotkey in {"{Enter}", "{Ctrl}{Enter}"}, "invalid_config", "发送按键无效。")
-        require(self.desktop_accessibility in {'existing', 'scoped_qt'}, 'invalid_config', '控件兼容模式无效。')
-        require(self.desktop_identity in {'ui_anchor', 'database_handles'}, 'invalid_config', '账号绑定模式无效。')
-        if self.desktop_accessibility == 'scoped_qt':
-            require(bool(re.fullmatch('[0-9a-f]{64}', self.desktop_dll_sha256)), 'invalid_config', '请固定本机微信 DLL 哈希。')
         return self
 
     def public(self):
@@ -91,6 +73,10 @@ class Config:
 
 def load_config(path):
     raw = json.loads(Path(path).read_text("utf-8-sig"))
+    require(isinstance(raw, dict), 'invalid_config', '配置必须是对象。')
+    for retired in ('desktop_window', 'desktop_account_anchor', 'desktop_identity',
+                    'desktop_accessibility', 'desktop_dll_sha256', 'send_hotkey'):
+        raw.pop(retired, None)
     require(isinstance(raw, dict) and not set(raw) - set(Config.__dataclass_fields__), "invalid_config", "配置包含未知字段。")
     cfg = Config(**raw).validate()
     token_path = cfg.state_dir / "api-token"
