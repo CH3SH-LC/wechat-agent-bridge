@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wechat-agent-bridge"
+version = "0.2.0"
+description = "Local ordinary-account WeChat message gateway for agents"
+readme = "README.md"
+license = "MIT AND Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "src/wechat_bridge/vendor/LICENSE*"]
+requires-python = ">=3.10"
+dependencies = ["cryptography==48.0.0", "zstandard==0.25.0"]
+
+[project.urls]
+Repository = "https://github.com/CH3SH-LC/wechat-agent-bridge"
+Issues = "https://github.com/CH3SH-LC/wechat-agent-bridge/issues"
+
+[project.optional-dependencies]
+desktop = ["uiautomation>=2.0.20,<3; sys_platform == 'win32'", "pywin32>=306; sys_platform == 'win32'", "psutil>=7,<8; sys_platform == 'win32'"]
+dev = ["build>=1.2,<2"]
+
+[project.scripts]
+wechat-bridge = "wechat_bridge.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"wechat_bridge.vendor" = ["provenance.json", "LICENSE*", "THIRD_PARTY_NOTICES.md"]

@@ -1,0 +1,1 @@
+"""Reused, attributed read-only collector; see provenance.json."""

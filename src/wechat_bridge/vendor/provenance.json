@@ -1,0 +1,37 @@
+[
+  {
+    "original_sha256": "3b62f6516ee29cdaa8570833c7223e546c471ee132334f47d5d603d5db6a7503",
+    "packaged_sha256": "6de47dca21661ff91b546e686edbbe5d4cb6d3604c44fd27fae34c5c74ad5152",
+    "source": "dsh-better-wechat/collector/extract_local.py",
+    "modifications": "package-relative imports only",
+    "file": "extract_local.py"
+  },
+  {
+    "original_sha256": "6d7f8155f169f913b077a3296385fa57b4852e6d5bd34e423bd2694072f602e4",
+    "packaged_sha256": "6d7f8155f169f913b077a3296385fa57b4852e6d5bd34e423bd2694072f602e4",
+    "source": "dsh-better-wechat/collector/wal_snapshot.py",
+    "modifications": "package-relative imports only",
+    "file": "wal_snapshot.py"
+  },
+  {
+    "original_sha256": "833ffb50f74e76357bd8aafde70b2191f848806312e181658f17d2de67467671",
+    "packaged_sha256": "659ccad71121902ae93d50cbf7814f449edc33770a74afccd547753407a78944",
+    "source": "dsh-better-wechat/collector/export_records.py",
+    "modifications": "package-relative imports only",
+    "file": "export_records.py"
+  },
+  {
+    "original_sha256": "0545a7c825dac3dd9bbc56bb6690472b4061af4121af5d6e68afb3dedfd60d35",
+    "packaged_sha256": "0545a7c825dac3dd9bbc56bb6690472b4061af4121af5d6e68afb3dedfd60d35",
+    "source": "dsh-better-wechat/collector/html_viewer.py",
+    "modifications": "package-relative imports only",
+    "file": "html_viewer.py"
+  },
+  {
+    "original_sha256": "e4517df52ba837ce441d2e179b5244e9765ec6f4c56d92c58cf22da3e7b4588f",
+    "packaged_sha256": "e4517df52ba837ce441d2e179b5244e9765ec6f4c56d92c58cf22da3e7b4588f",
+    "source": "dsh-better-wechat/collector/selection.py",
+    "modifications": "package-relative imports only",
+    "file": "selection.py"
+  }
+]
