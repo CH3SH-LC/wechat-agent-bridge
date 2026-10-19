@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-19",
+  "version": "0.2.0rc1",
+  "offline": {
+    "tests": 89,
+    "failed": 0,
+    "skipped": 0,
+    "clean_clone_seconds": 9.055
+  },
+  "ci": {
+    "conclusion": "success",
+    "headSha": "61adb1acdd10ec82cd5e6455d3c72e442757350d",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "name": "offline (windows-latest, 3.10)",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "package",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "offline (ubuntu-latest, 3.10)",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "offline (windows-latest, 3.13)",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "name": "offline (ubuntu-latest, 3.13)",
+        "status": "completed"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/CH3SH-LC/wechat-agent-bridge/actions/runs/39268635210"
+  },
+  "installation": {
+    "fresh_venv": true,
+    "wheel": true,
+    "mcp_tools": 20,
+    "real_mcp_status_listen_history": true
+  },
+  "real_wechat": {
+    "version": "4.1.15.51",
+    "source_refresh": "passed",
+    "unique_test_group": "passed",
+    "text_file_listener_roundtrip": "blocked_windows_locked",
+    "new_messages_sent_this_run": 0,
+    "source_coverage": "locally_retained_messages"
+  },
+  "privacy": {
+    "source_scan": "passed",
+    "package_scan": "passed",
+    "private_evidence_excluded": true
+  },
+  "delivery_and_read_confirmation": false
+}

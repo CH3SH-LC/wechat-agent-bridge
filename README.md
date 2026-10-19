@@ -26,7 +26,7 @@ py -m venv .venv
 
 旧 PowerShell 的原生命令 JSON 引号可能不同；复杂参数可保存为 UTF-8 JSON 后使用 `--arguments-file arguments.json`。隔离演示完全不访问微信。将演示配置改为 `sending_mode: "mock"` 后重启，可用 `examples/agent_consumer.py` 完成模拟收发闭环。
 
-也可从 [Releases](https://github.com/CH3SH-LC/wechat-agent-bridge/releases) 下载 wheel，使用 `python -m pip install "./wechat_agent_bridge-0.2.0-py3-none-any.whl[desktop]"` 安装。源码和测试可在 Linux 运行，真实微信功能只在 Windows 运行。
+也可从 [Releases](https://github.com/CH3SH-LC/wechat-agent-bridge/releases) 下载候选版 wheel，使用 `python -m pip install "./wechat_agent_bridge-0.2.0rc1-py3-none-any.whl[desktop]"` 安装。源码和测试可在 Linux 运行，真实微信功能只在 Windows 运行。候选版已通过离线与跨平台 CI，真实文字/文件发送闭环仍需在解锁桌面上验收，详见测试报告。
 
 ## 接入本机微信
 
