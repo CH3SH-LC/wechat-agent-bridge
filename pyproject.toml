@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wechat-agent-bridge"
-version = "0.2.0rc2"
-description = "Background local WeChat reader for agents; real sending not yet implemented"
+version = "0.2.0rc3"
+description = "Background WeChat reading, listening and version-locked native text/file sending for agents"
 readme = "README.md"
 license = "MIT AND Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md", "src/wechat_bridge/vendor/LICENSE*"]

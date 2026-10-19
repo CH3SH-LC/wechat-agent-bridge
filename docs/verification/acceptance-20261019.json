@@ -1,50 +1,47 @@
 {
   "date": "2026-10-19",
-  "version": "0.2.0rc2",
+  "version": "0.2.0rc3",
   "offline": {
-    "tests": 74,
+    "tests": 80,
     "failed": 0,
     "skipped": 0,
-    "seconds": 10.453
+    "seconds": 9.268
   },
-  "real_wechat": {
-    "client_version": "4.1.15.51",
-    "source_refresh": "passed",
-    "test_group_unique": true,
-    "subscription_active": true,
-    "retained_history_rows": 2,
-    "fresh_external_message_test": "not_performed_in_this_revision",
-    "capabilities": {
-      "background_read": true,
-      "real_send_text": false,
-      "real_send_file": false,
-      "ui_automation": false,
-      "real_send_transport": null,
-      "send_blocker": "background_sender_not_implemented"
+  "native_build": "MSVC x64 /W4 /WX passed",
+  "client_version": "4.1.15.51",
+  "target_name": "测试群",
+  "ui_automation": false,
+  "web_protocol": false,
+  "remote_delivery_or_read_verified": false,
+  "external_incoming_message_tested_this_round": false,
+  "hundred_concurrent_real_sends_tested": false,
+  "paused_after_acceptance": true,
+  "native": {
+    "text": {
+      "state": "locally_observed",
+      "thread_exit": 0,
+      "callback_status": 1,
+      "listener_matched": true,
+      "message_type": "text"
     },
-    "sending_mode": "disabled",
-    "paused": true,
-    "outbox_unchanged": true,
-    "unsupported_send_calls_rejected": [
-      {
-        "tool": "wechat_send_text",
-        "rejected": true,
-        "code": "background_sender_unavailable"
-      },
-      {
-        "tool": "wechat_send_file",
-        "rejected": true,
-        "code": "background_sender_unavailable"
-      }
-    ],
-    "actual_messages_sent_this_revision": 0,
-    "text_file_listener_roundtrip": "not_completed"
+    "file": {
+      "state": "locally_observed",
+      "thread_exit": 0,
+      "callback_status": 1,
+      "listener_matched": true,
+      "message_type": "file",
+      "file_size": 134,
+      "nonzero_server_id": true,
+      "upload_metadata_present": true
+    },
+    "file_unicode_extensionless": {
+      "state": "locally_observed",
+      "thread_exit": 0,
+      "callback_status": 1,
+      "listener_matched": true,
+      "name_preserved": true,
+      "file_size": 134
+    }
   },
-  "complete_project_acceptance": false,
-  "ci": {
-    "status": "pending_for_new_revision"
-  },
-  "privacy": {
-    "private_evidence_excluded": true
-  }
+  "idempotent_replay_without_resend": 3
 }

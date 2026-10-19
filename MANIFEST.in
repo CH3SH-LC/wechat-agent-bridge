@@ -2,5 +2,6 @@ include LICENSE THIRD_PARTY_NOTICES.md README.md TEST_REPORT.md
 recursive-include docs *.md *.json *.log
 recursive-include tests *.py
 recursive-include examples *.py *.json
+recursive-include native *.cpp *.ps1
 recursive-include src/wechat_bridge/vendor LICENSE* *.json *.md
 global-exclude __pycache__ *.py[cod] *.sqlite *.db

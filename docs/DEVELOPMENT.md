@@ -6,7 +6,7 @@
 
 `store.py` 用 SQLite WAL 保存事件、分片游标、租约、附件和出站请求。入站去重包含账号、会话、分片、local_id、sort_seq。消费者是至少一次处理，failed 需要显式 retry；正文标为 untrusted_content。
 
-`service.py` 分离采集和串行出站线程，共享来源锁。当前仅有隔离 mock 出站；preview 不执行，disabled 拒绝入队。旧 desktop 配置不能启动，旧 queued 任务不能执行；sending 崩溃记录恢复为 unknown，不自动重发。真实后台发送不存在，状态必须明确报告 false。测试注入 sender 也只允许在 mock + fixture 下执行。
+`service.py` 分离采集和串行出站线程，共享来源锁。出站支持隔离 mock 和明确启用的 native_experimental；preview 不执行，disabled 拒绝入队。旧 desktop 配置不能启动，旧 queued 任务不能执行；sending 崩溃记录恢复为 unknown，不自动重发。真实原生发送必须绑定 live 来源、稳定目标 ID、账号、PID 和 DLL 哈希。native.py 只传递有界请求，native/native_text.cpp 在客户端任务线程中调用文字或文件发送服务；所有其他模式的 real_send 能力为 false。
 
 界面发送器和 Qt 写入代码已从发行源码删除。旧恢复草稿 API、inspect-ui 命令、窗口 handle 参数及 UI 自动化依赖均移除。不能通过“自动兜底”重新引入界面路线。旧草稿和 unknown 回执保留，核对接口只读。对应历史可从 Git 旧提交追溯。
 
@@ -20,4 +20,4 @@
 
 ## 已知限制
 
-后台发送尚未实现，见 [适配调查](BACKGROUND_ADAPTATION.md)。没有自动保留期清理、Windows 服务安装、自启动、自动重登、原始媒体下载或多日可靠性保证。发生变化的整个消息分片需要认证解密，大库轮询可能超过配置间隔。每轮补录存在分页上限，插入到旧游标之前的历史记录不会自动重播。
+原生适配仅验收固定 4.1.15.51 版本，见 [适配说明](BACKGROUND_ADAPTATION.md)。未知原生异常可能保留进程内资源，不能宣称长期可靠；版本升级必须重新验收。没有自动保留期清理、Windows 服务安装、自启动、自动重登、原始媒体下载或多日可靠性保证。发生变化的整个消息分片需要认证解密，大库轮询可能超过配置间隔。每轮补录存在分页上限，插入到旧游标之前的历史记录不会自动重播。

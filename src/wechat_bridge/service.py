@@ -19,6 +19,9 @@ class Bridge:
         self.store.recover()
         self.source = source or make_source(cfg)
         self.sender = sender
+        if self.sender is None and cfg.sending_mode == 'native_experimental':
+            from .native import NativeTextSender
+            self.sender = NativeTextSender(cfg)
         self.stop = threading.Event()
         self.send_lock = threading.Lock()
         self.threads = []
@@ -82,9 +85,11 @@ class Bridge:
         return {'config': self.cfg.public(), 'paused': self.store.paused(), 'last_poll': self.last_poll,
                 'last_error': self.last_error, 'source': self.source.health(),
                 'capabilities': {'background_read': self.cfg.source_mode == 'live',
-                                 'real_send_text': False, 'real_send_file': False,
-                                 'ui_automation': False, 'real_send_transport': None,
-                                 'send_blocker': 'background_sender_not_implemented'},
+                                 'real_send_text': self.cfg.sending_mode == 'native_experimental',
+                                 'real_send_file': self.cfg.sending_mode == 'native_experimental',
+                                 'ui_automation': False, 'web_protocol': False,
+                                 'real_send_transport': 'native_experimental' if self.cfg.sending_mode == 'native_experimental' else None,
+                                 'send_blocker': None if self.cfg.sending_mode == 'native_experimental' else 'background_sender_not_implemented'},
                 'subscriptions': self.store.subscriptions(), **self.store.counts()}
 
     def chat(self, ident):
@@ -144,8 +149,12 @@ class Bridge:
         return item
 
     def send(self, chat_id, key, text=None, attachment_id=None):
-        require(self.cfg.sending_mode in {'preview', 'mock'}, 'background_sender_unavailable',
+        require(self.cfg.sending_mode in {'preview', 'mock', 'native_experimental'}, 'background_sender_unavailable',
                 '后台直发尚未实现；界面发送已移除。本请求未入队、未发送。')
+        if self.cfg.sending_mode == 'native_experimental':
+            from .native import make_request
+            content = self.attachment(attachment_id)['path'] if attachment_id else text
+            make_request(chat_id, content, file=bool(attachment_id))
         require(self.cfg.sending_mode != 'mock' or self.cfg.source_mode == 'fixture',
                 'invalid_config', '模拟发送不能访问真实微信。')
         chat = self.chat(chat_id)
@@ -169,7 +178,8 @@ class Bridge:
 
     def _guard(self, job):
         p = job['payload']
-        require(self.cfg.sending_mode == 'mock' and self.cfg.source_mode == 'fixture',
+        require((self.cfg.sending_mode == 'mock' and self.cfg.source_mode == 'fixture')
+                or (self.cfg.sending_mode == 'native_experimental' and self.cfg.source_mode == 'live'),
                 'background_sender_unavailable', '当前版本没有真实后台发送器；拒绝执行旧队列。')
         require(not self.stop.is_set() and not self.store.paused(), 'paused', '发送已暂停。')
         require(p['mode'] == self.cfg.sending_mode and p['mode'] != 'preview', 'mode_changed', '发送模式已变化，不自动升级预览记录。')

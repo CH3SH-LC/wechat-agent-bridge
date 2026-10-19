@@ -66,8 +66,12 @@ class BackgroundBoundaryTests(FixtureCase):
         self.assertFalse((package / 'qt_accessibility.py').exists())
         source = '\n'.join(p.read_text('utf-8') for p in package.glob('*.py'))
         for symbol in ('uiautomation', 'SetForegroundWindow', 'SendKeys', 'win32clipboard',
-                       'WriteProcessMemory', 'CreateRemoteThread', 'win32gui'):
+                       'win32gui'):
             self.assertNotIn(symbol, source)
+        # Process calls are confined to the explicitly enabled native transport.
+        reader_source = '\n'.join(p.read_text('utf-8') for p in package.glob('*.py') if p.name != 'native.py')
+        for symbol in ('WriteProcessMemory', 'CreateRemoteThread'):
+            self.assertNotIn(symbol, reader_source)
         self.assertNotIn('uiautomation', (ROOT / 'pyproject.toml').read_text('utf-8'))
 
     def test_live_initializer_needs_no_window_and_disables_sending(self):

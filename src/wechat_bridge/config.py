@@ -28,6 +28,8 @@ class Config:
     port: int = 18769
     weixin_exe: str = r"D:\Program Files\Tencent\Weixin\Weixin.exe"
     desktop_pid: int | None = None
+    native_dll_path: str | None = None
+    native_dll_sha256: str = ""
     token: str = ""
 
     def validate(self):
@@ -37,7 +39,7 @@ class Config:
             self.source_dir = Path(self.source_dir).resolve()
         self.file_roots = [Path(p).resolve() for p in self.file_roots]
         require(self.source_mode in {"fixture", "snapshot", "live"}, "invalid_config", "来源模式无效。")
-        require(self.sending_mode in {"preview", "disabled", "mock"}, "invalid_config", "发送模式无效；界面发送已移除，后台发送尚未实现。")
+        require(self.sending_mode in {"preview", "disabled", "mock", "native_experimental"}, "invalid_config", "发送模式无效；界面与网页发送均不受支持。")
         string(self.account_id, 200)
         require(bool(re.fullmatch(r"[A-Za-z0-9_@.\-]+", self.account_id)), "invalid_config", "账号标识无效。")
         require(self.source_dir is not None, "invalid_config", "必须显式选择读取来源。")
@@ -62,6 +64,12 @@ class Config:
             require(self.source_mode == "fixture", "invalid_config", "模拟发送只能搭配隔离数据。")
         if self.source_mode == 'live':
             require(type(self.desktop_pid) is int and self.desktop_pid > 0, 'invalid_config', '实时读取必须绑定微信主进程 PID。')
+        if self.sending_mode == 'native_experimental':
+            require(self.source_mode == 'live' and isinstance(self.native_dll_path, str) and self.native_dll_path
+                    and bool(re.fullmatch(r'[a-f0-9]{64}', self.native_dll_sha256)),
+                    'invalid_config', '原生发送必须绑定实时来源、明确的适配 DLL 及 SHA256。')
+            require(bool(self.send_allowlist) and set(self.send_target_names) == set(self.send_allowlist),
+                    'invalid_config', '原生发送必须固定所有白名单目标的名称。')
         return self
 
     def public(self):

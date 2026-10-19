@@ -1,3 +1,4 @@
+Historical pre-native test evidence; not the current release result.
 test_all_tools_reject_unknown_arguments (test_bridge.ConfigAndContractTests.test_all_tools_reject_unknown_arguments) ... ok
 test_bools_not_integer_limits_and_nonempty_chat_filter (test_bridge.ConfigAndContractTests.test_bools_not_integer_limits_and_nonempty_chat_filter) ... ok
 test_configuration_cannot_enable_desktop_with_fixture (test_bridge.ConfigAndContractTests.test_configuration_cannot_enable_desktop_with_fixture) ... ok
